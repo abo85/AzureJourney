@@ -7,10 +7,6 @@
 			"metadata": "Workspace name",
 			"defaultValue": "global-ws"
 		},
-		"AzureDataLakeStorage1_accountKey": {
-			"type": "secureString",
-			"metadata": "Secure string for 'accountKey' of 'AzureDataLakeStorage1'"
-		},
 		"AzureSqlDatabase1_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'AzureSqlDatabase1'"
@@ -18,10 +14,6 @@
 		"global-ws-WorkspaceDefaultSqlServer_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'global-ws-WorkspaceDefaultSqlServer'"
-		},
-		"AzureDataLakeStorage1_properties_typeProperties_url": {
-			"type": "string",
-			"defaultValue": "https://contosolake.dfs.core.windows.net"
 		},
 		"MDWResources_sasUri": {
 			"type": "secureString",
@@ -45,14 +37,14 @@
 	},
 	"resources": [
 		{
-			"name": "[concat(parameters('workspaceName'), '/Pipeline 1')]",
+			"name": "[concat(parameters('workspaceName'), '/Pipeline 2')]",
 			"type": "Microsoft.Synapse/workspaces/pipelines",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
 				"activities": [
 					{
-						"name": "Lookup1",
-						"type": "Lookup",
+						"name": "Get Metadata1",
+						"type": "GetMetadata",
 						"dependsOn": [],
 						"policy": {
 							"timeout": "0.12:00:00",
@@ -63,49 +55,46 @@
 						},
 						"userProperties": [],
 						"typeProperties": {
-							"source": {
-								"type": "AzureSqlSource",
-								"sqlReaderQuery": "select t.name as TableName,s.name as SchemaName \nfrom sys.tables t\ninner join sys.schemas s on t.schema_id=s.schema_id",
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
 							"dataset": {
-								"referenceName": "GeneriqueTableForSQL",
+								"referenceName": "DelimitedText1",
 								"type": "DatasetReference",
 								"parameters": {
-									"logicalservername": {
-										"value": "@pipeline().parameters.logicalservername",
-										"type": "Expression"
-									},
-									"databasename": {
-										"value": "@pipeline().parameters.databasename",
-										"type": "Expression"
-									}
+									"itemName": "*"
 								}
 							},
-							"firstRowOnly": false
+							"fieldList": [
+								"itemName"
+							],
+							"storeSettings": {
+								"type": "AzureBlobStorageReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
 						}
 					},
 					{
-						"name": "LoopOnTables",
+						"name": "ForEach1",
 						"type": "ForEach",
 						"dependsOn": [
 							{
-								"activity": "Lookup1",
+								"activity": "Get Metadata1",
 								"dependencyConditions": [
-									"Completed"
+									"Skipped"
 								]
 							}
 						],
 						"userProperties": [],
 						"typeProperties": {
 							"items": {
-								"value": "@activity('Lookup1').output.value",
+								"value": "@activity('Get Metadata1').output.itemName",
 								"type": "Expression"
 							},
 							"activities": [
 								{
-									"name": "Copy data1",
+									"name": "Copy data2",
 									"type": "Copy",
 									"dependsOn": [],
 									"policy": {
@@ -118,21 +107,25 @@
 									"userProperties": [],
 									"typeProperties": {
 										"source": {
-											"type": "AzureSqlSource",
-											"sqlReaderQuery": {
-												"value": "@concat('SELECT * FROM ', item().SchemaName,'.',item().TableName)",
-												"type": "Expression"
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "AzureBlobStorageReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
 											},
-											"queryTimeout": "02:00:00",
-											"partitionOption": "None"
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
 										},
 										"sink": {
-											"type": "ParquetSink",
+											"type": "DelimitedTextSink",
 											"storeSettings": {
 												"type": "AzureBlobFSWriteSettings"
 											},
 											"formatSettings": {
-												"type": "ParquetWriteSettings"
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
 											}
 										},
 										"enableStaging": false,
@@ -147,15 +140,11 @@
 									},
 									"inputs": [
 										{
-											"referenceName": "GeneriqueTableForSQL",
+											"referenceName": "DelimitedText1",
 											"type": "DatasetReference",
 											"parameters": {
-												"logicalservername": {
-													"value": "@pipeline().parameters.logicalservername",
-													"type": "Expression"
-												},
-												"databasename": {
-													"value": "@pipeline().parameters.databasename",
+												"itemName": {
+													"value": "@item()",
 													"type": "Expression"
 												}
 											}
@@ -163,17 +152,11 @@
 									],
 									"outputs": [
 										{
-											"referenceName": "Parquet1",
+											"referenceName": "DelimitedText2",
 											"type": "DatasetReference",
 											"parameters": {
-												"container": {
-													"value": "@pipeline().parameters.container",
-													"type": "Expression"
-												},
-												"path": {
-													"value": "@concat(pipeline().parameters.databasename,'\\[',\nitem().TableName,']'\n)",
-													"type": "Expression"
-												}
+												"container": "landingzone",
+												"path": "taxidata"
 											}
 										}
 									]
@@ -186,95 +169,10 @@
 					"elapsedTimeMetric": {},
 					"cancelAfter": {}
 				},
-				"parameters": {
-					"logicalservername": {
-						"type": "string"
-					},
-					"databasename": {
-						"type": "string"
-					},
-					"container": {
-						"type": "string"
+				"variables": {
+					"FilesName": {
+						"type": "Array"
 					}
-				},
-				"annotations": [],
-				"lastPublishTime": "2022-11-04T14:56:47Z"
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/datasets/GeneriqueTableForSQL')]",
-				"[concat(variables('workspaceId'), '/datasets/Parquet1')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/Pipeline 2')]",
-			"type": "Microsoft.Synapse/workspaces/pipelines",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"activities": [
-					{
-						"name": "Copy data1",
-						"type": "Copy",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "DelimitedTextSource",
-								"storeSettings": {
-									"type": "AzureBlobStorageReadSettings",
-									"recursive": true,
-									"enablePartitionDiscovery": false
-								},
-								"formatSettings": {
-									"type": "DelimitedTextReadSettings"
-								}
-							},
-							"sink": {
-								"type": "DelimitedTextSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings"
-								},
-								"formatSettings": {
-									"type": "DelimitedTextWriteSettings",
-									"quoteAllText": true,
-									"fileExtension": ".txt"
-								}
-							},
-							"enableStaging": false,
-							"translator": {
-								"type": "TabularTranslator",
-								"typeConversion": true,
-								"typeConversionSettings": {
-									"allowDataTruncation": true,
-									"treatBooleanAsNumber": false
-								}
-							}
-						},
-						"inputs": [
-							{
-								"referenceName": "DelimitedText1",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						],
-						"outputs": [
-							{
-								"referenceName": "DelimitedText2",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						]
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {},
-					"cancelAfter": {}
 				},
 				"annotations": []
 			},
@@ -292,12 +190,20 @@
 					"referenceName": "MDWResources",
 					"type": "LinkedServiceReference"
 				},
+				"parameters": {
+					"itemName": {
+						"type": "string"
+					}
+				},
 				"annotations": [],
 				"type": "DelimitedText",
 				"typeProperties": {
 					"location": {
 						"type": "AzureBlobStorageLocation",
-						"fileName": "yellow_tripdata_2019-01.csv",
+						"fileName": {
+							"value": "@dataset().itemName",
+							"type": "Expression"
+						},
 						"container": "nyctaxidata"
 					},
 					"columnDelimiter": ",",
@@ -319,12 +225,27 @@
 					"referenceName": "global-ws-WorkspaceDefaultStorage",
 					"type": "LinkedServiceReference"
 				},
+				"parameters": {
+					"container": {
+						"type": "string"
+					},
+					"path": {
+						"type": "string"
+					}
+				},
 				"annotations": [],
 				"type": "DelimitedText",
 				"typeProperties": {
 					"location": {
 						"type": "AzureBlobFSLocation",
-						"fileSystem": "landingzone"
+						"folderPath": {
+							"value": "@dataset().path",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().container",
+							"type": "Expression"
+						}
 					},
 					"columnDelimiter": ",",
 					"escapeChar": "\\",
@@ -334,42 +255,6 @@
 			},
 			"dependsOn": [
 				"[concat(variables('workspaceId'), '/linkedServices/global-ws-WorkspaceDefaultStorage')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/GeneriqueTableForSQL')]",
-			"type": "Microsoft.Synapse/workspaces/datasets",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "AzureSqlDatabase1",
-					"type": "LinkedServiceReference",
-					"parameters": {
-						"logicalservername": {
-							"value": "@dataset().logicalservername",
-							"type": "Expression"
-						},
-						"databasename": {
-							"value": "@dataset().databasename",
-							"type": "Expression"
-						}
-					}
-				},
-				"parameters": {
-					"logicalservername": {
-						"type": "string"
-					},
-					"databasename": {
-						"type": "string"
-					}
-				},
-				"annotations": [],
-				"type": "AzureSqlTable",
-				"schema": [],
-				"typeProperties": {}
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/linkedServices/AzureSqlDatabase1')]"
 			]
 		},
 		{
@@ -409,90 +294,6 @@
 			},
 			"dependsOn": [
 				"[concat(variables('workspaceId'), '/linkedServices/global-ws-WorkspaceDefaultStorage')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/Parquet3')]",
-			"type": "Microsoft.Synapse/workspaces/datasets",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "global-ws-WorkspaceDefaultStorage",
-					"type": "LinkedServiceReference"
-				},
-				"annotations": [],
-				"type": "Parquet",
-				"typeProperties": {
-					"location": {
-						"type": "AzureBlobFSLocation",
-						"fileSystem": "landingzone"
-					},
-					"compressionCodec": "snappy"
-				},
-				"schema": [
-					{
-						"name": "AddressID",
-						"type": "INT32"
-					},
-					{
-						"name": "AddressLine1",
-						"type": "UTF8"
-					},
-					{
-						"name": "AddressLine2",
-						"type": "UTF8"
-					},
-					{
-						"name": "City",
-						"type": "UTF8"
-					},
-					{
-						"name": "StateProvince",
-						"type": "UTF8"
-					},
-					{
-						"name": "CountryRegion",
-						"type": "UTF8"
-					},
-					{
-						"name": "PostalCode",
-						"type": "UTF8"
-					},
-					{
-						"name": "rowguid",
-						"type": "UTF8"
-					},
-					{
-						"name": "ModifiedDate",
-						"type": "INT96"
-					}
-				]
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/linkedServices/global-ws-WorkspaceDefaultStorage')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/AzureDataLakeStorage1')]",
-			"type": "Microsoft.Synapse/workspaces/linkedServices",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"annotations": [],
-				"type": "AzureBlobFS",
-				"typeProperties": {
-					"url": "[parameters('AzureDataLakeStorage1_properties_typeProperties_url')]",
-					"accountKey": {
-						"type": "SecureString",
-						"value": "[parameters('AzureDataLakeStorage1_accountKey')]"
-					}
-				},
-				"connectVia": {
-					"referenceName": "AutoResolveIntegrationRuntime",
-					"type": "IntegrationRuntimeReference"
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
 			]
 		},
 		{
