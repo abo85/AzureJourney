@@ -432,7 +432,7 @@
 			"location": "westeurope"
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/Pipeline 1')]",
+			"name": "[concat(parameters('workspaceName'), '/MOVE_NYCTLC_TO_SYNAPSE')]",
 			"type": "Microsoft.Synapse/workspaces/pipelines",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
@@ -483,14 +483,24 @@
 							{
 								"referenceName": "NyctlcParquet",
 								"type": "DatasetReference",
-								"parameters": {}
+								"parameters": {
+									"path": {
+										"value": "@pipeline().parameters.Path",
+										"type": "Expression"
+									}
+								}
 							}
 						],
 						"outputs": [
 							{
 								"referenceName": "Synapse_nyctlcParquet",
 								"type": "DatasetReference",
-								"parameters": {}
+								"parameters": {
+									"path": {
+										"value": "@pipeline().parameters.Path",
+										"type": "Expression"
+									}
+								}
 							}
 						]
 					}
@@ -498,6 +508,11 @@
 				"policy": {
 					"elapsedTimeMetric": {},
 					"cancelAfter": {}
+				},
+				"parameters": {
+					"Path": {
+						"type": "string"
+					}
 				},
 				"annotations": []
 			},
@@ -534,12 +549,20 @@
 					"referenceName": "AzureBlobStoragenyctlc",
 					"type": "LinkedServiceReference"
 				},
+				"parameters": {
+					"path": {
+						"type": "string"
+					}
+				},
 				"annotations": [],
 				"type": "Parquet",
 				"typeProperties": {
 					"location": {
 						"type": "AzureBlobStorageLocation",
-						"folderPath": "fhv",
+						"folderPath": {
+							"value": "@dataset().path",
+							"type": "Expression"
+						},
 						"container": "nyctlc"
 					},
 					"compressionCodec": "snappy"
@@ -644,12 +667,20 @@
 					"referenceName": "global-ws-WorkspaceDefaultStorage",
 					"type": "LinkedServiceReference"
 				},
+				"parameters": {
+					"path": {
+						"type": "string"
+					}
+				},
 				"annotations": [],
 				"type": "Parquet",
 				"typeProperties": {
 					"location": {
 						"type": "AzureBlobFSLocation",
-						"folderPath": "nyctlc/fhv",
+						"folderPath": {
+							"value": "CONCAT(\"nyctlc/\",dataset().path)",
+							"type": "Expression"
+						},
 						"fileSystem": "landingzone"
 					},
 					"compressionCodec": "snappy"
