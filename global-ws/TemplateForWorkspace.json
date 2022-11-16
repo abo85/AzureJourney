@@ -19,6 +19,10 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'sasUri' of 'AzureBlobStorage1'"
 		},
+		"AzureBlobStoragenyctlc_sasUri": {
+			"type": "secureString",
+			"metadata": "Secure string for 'sasUri' of 'AzureBlobStoragenyctlc'"
+		},
 		"MDWResources_sasUri": {
 			"type": "secureString",
 			"metadata": "Secure string for 'sasUri' of 'MDWResources'"
@@ -26,16 +30,102 @@
 		"global-ws-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "https://synapseadlsfromdax.dfs.core.windows.net"
-		},
-		"AzureBlobStoragenyctlc_sasUri": {
-			"type": "secureString",
-			"metadata": "Secure string for 'sasUri' of 'AzureBlobStoragenyctlc'"
 		}
 	},
 	"variables": {
 		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
 	},
 	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/MOVE_NYCTLC_TO_SYNAPSE')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy data1",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "ParquetSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"wildcardFileName": "*.parquet",
+									"enablePartitionDiscovery": false
+								}
+							},
+							"sink": {
+								"type": "ParquetSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings",
+									"copyBehavior": "PreserveHierarchy"
+								},
+								"formatSettings": {
+									"type": "ParquetWriteSettings"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "NyctlcParquet",
+								"type": "DatasetReference",
+								"parameters": {
+									"path": {
+										"value": "@pipeline().parameters.Path",
+										"type": "Expression"
+									}
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "Synapse_nyctlcParquet",
+								"type": "DatasetReference",
+								"parameters": {
+									"path": {
+										"value": "@pipeline().parameters.Path",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"Path": {
+						"type": "string"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/NyctlcParquet')]",
+				"[concat(variables('workspaceId'), '/datasets/Synapse_nyctlcParquet')]"
+			]
+		},
 		{
 			"name": "[concat(parameters('workspaceName'), '/Move_CSV_TO_SYNAPSE_ADSL')]",
 			"type": "Microsoft.Synapse/workspaces/pipelines",
@@ -242,6 +332,124 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/NyctlcParquet')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureBlobStoragenyctlc",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"path": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"folderPath": {
+							"value": "@dataset().path",
+							"type": "Expression"
+						},
+						"container": "nyctlc"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": [
+					{
+						"name": "vendorID",
+						"type": "UTF8"
+					},
+					{
+						"name": "tpepPickupDateTime",
+						"type": "INT96"
+					},
+					{
+						"name": "tpepDropoffDateTime",
+						"type": "INT96"
+					},
+					{
+						"name": "passengerCount",
+						"type": "INT32"
+					},
+					{
+						"name": "tripDistance",
+						"type": "DOUBLE"
+					},
+					{
+						"name": "puLocationId",
+						"type": "UTF8"
+					},
+					{
+						"name": "doLocationId",
+						"type": "UTF8"
+					},
+					{
+						"name": "startLon",
+						"type": "DOUBLE"
+					},
+					{
+						"name": "startLat",
+						"type": "DOUBLE"
+					},
+					{
+						"name": "endLon",
+						"type": "DOUBLE"
+					},
+					{
+						"name": "endLat",
+						"type": "DOUBLE"
+					},
+					{
+						"name": "rateCodeId",
+						"type": "INT32"
+					},
+					{
+						"name": "storeAndFwdFlag",
+						"type": "UTF8"
+					},
+					{
+						"name": "paymentType",
+						"type": "UTF8"
+					},
+					{
+						"name": "fareAmount",
+						"type": "DOUBLE"
+					},
+					{
+						"name": "extra",
+						"type": "DOUBLE"
+					},
+					{
+						"name": "mtaTax",
+						"type": "DOUBLE"
+					},
+					{
+						"name": "improvementSurcharge",
+						"type": "UTF8"
+					},
+					{
+						"name": "tipAmount",
+						"type": "DOUBLE"
+					},
+					{
+						"name": "tollsAmount",
+						"type": "DOUBLE"
+					},
+					{
+						"name": "totalAmount",
+						"type": "DOUBLE"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/AzureBlobStoragenyctlc')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/SynapseCsv')]",
 			"type": "Microsoft.Synapse/workspaces/datasets",
 			"apiVersion": "2019-06-01-preview",
@@ -283,6 +491,76 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/Synapse_nyctlcParquet')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "global-ws-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"path": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@concat('nyctlc/',dataset().path)",
+							"type": "Expression"
+						},
+						"fileSystem": "landingzone"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": [
+					{
+						"name": "AddressID",
+						"type": "INT32"
+					},
+					{
+						"name": "AddressLine1",
+						"type": "UTF8"
+					},
+					{
+						"name": "AddressLine2",
+						"type": "UTF8"
+					},
+					{
+						"name": "City",
+						"type": "UTF8"
+					},
+					{
+						"name": "StateProvince",
+						"type": "UTF8"
+					},
+					{
+						"name": "CountryRegion",
+						"type": "UTF8"
+					},
+					{
+						"name": "PostalCode",
+						"type": "UTF8"
+					},
+					{
+						"name": "rowguid",
+						"type": "UTF8"
+					},
+					{
+						"name": "ModifiedDate",
+						"type": "INT96"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/global-ws-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/AzureBlobStorage1')]",
 			"type": "Microsoft.Synapse/workspaces/linkedServices",
 			"apiVersion": "2019-06-01-preview",
@@ -291,6 +569,25 @@
 				"type": "AzureBlobStorage",
 				"typeProperties": {
 					"sasUri": "[parameters('AzureBlobStorage1_sasUri')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AzureBlobStoragenyctlc')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"sasUri": "[parameters('AzureBlobStoragenyctlc_sasUri')]"
 				},
 				"connectVia": {
 					"referenceName": "AutoResolveIntegrationRuntime",
@@ -430,303 +727,6 @@
 			},
 			"dependsOn": [],
 			"location": "westeurope"
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/MOVE_NYCTLC_TO_SYNAPSE')]",
-			"type": "Microsoft.Synapse/workspaces/pipelines",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"activities": [
-					{
-						"name": "Copy data1",
-						"type": "Copy",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "ParquetSource",
-								"storeSettings": {
-									"type": "AzureBlobStorageReadSettings",
-									"recursive": true,
-									"wildcardFileName": "*.parquet",
-									"enablePartitionDiscovery": false
-								}
-							},
-							"sink": {
-								"type": "ParquetSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings",
-									"copyBehavior": "PreserveHierarchy"
-								},
-								"formatSettings": {
-									"type": "ParquetWriteSettings"
-								}
-							},
-							"enableStaging": false,
-							"translator": {
-								"type": "TabularTranslator",
-								"typeConversion": true,
-								"typeConversionSettings": {
-									"allowDataTruncation": true,
-									"treatBooleanAsNumber": false
-								}
-							}
-						},
-						"inputs": [
-							{
-								"referenceName": "NyctlcParquet",
-								"type": "DatasetReference",
-								"parameters": {
-									"path": {
-										"value": "@pipeline().parameters.Path",
-										"type": "Expression"
-									}
-								}
-							}
-						],
-						"outputs": [
-							{
-								"referenceName": "Synapse_nyctlcParquet",
-								"type": "DatasetReference",
-								"parameters": {
-									"path": {
-										"value": "@pipeline().parameters.Path",
-										"type": "Expression"
-									}
-								}
-							}
-						]
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {},
-					"cancelAfter": {}
-				},
-				"parameters": {
-					"Path": {
-						"type": "string"
-					}
-				},
-				"annotations": []
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/datasets/NyctlcParquet')]",
-				"[concat(variables('workspaceId'), '/datasets/Synapse_nyctlcParquet')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/AzureBlobStoragenyctlc')]",
-			"type": "Microsoft.Synapse/workspaces/linkedServices",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"annotations": [],
-				"type": "AzureBlobStorage",
-				"typeProperties": {
-					"sasUri": "[parameters('AzureBlobStoragenyctlc_sasUri')]"
-				},
-				"connectVia": {
-					"referenceName": "AutoResolveIntegrationRuntime",
-					"type": "IntegrationRuntimeReference"
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/NyctlcParquet')]",
-			"type": "Microsoft.Synapse/workspaces/datasets",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "AzureBlobStoragenyctlc",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"path": {
-						"type": "string"
-					}
-				},
-				"annotations": [],
-				"type": "Parquet",
-				"typeProperties": {
-					"location": {
-						"type": "AzureBlobStorageLocation",
-						"folderPath": {
-							"value": "@dataset().path",
-							"type": "Expression"
-						},
-						"container": "nyctlc"
-					},
-					"compressionCodec": "snappy"
-				},
-				"schema": [
-					{
-						"name": "vendorID",
-						"type": "UTF8"
-					},
-					{
-						"name": "tpepPickupDateTime",
-						"type": "INT96"
-					},
-					{
-						"name": "tpepDropoffDateTime",
-						"type": "INT96"
-					},
-					{
-						"name": "passengerCount",
-						"type": "INT32"
-					},
-					{
-						"name": "tripDistance",
-						"type": "DOUBLE"
-					},
-					{
-						"name": "puLocationId",
-						"type": "UTF8"
-					},
-					{
-						"name": "doLocationId",
-						"type": "UTF8"
-					},
-					{
-						"name": "startLon",
-						"type": "DOUBLE"
-					},
-					{
-						"name": "startLat",
-						"type": "DOUBLE"
-					},
-					{
-						"name": "endLon",
-						"type": "DOUBLE"
-					},
-					{
-						"name": "endLat",
-						"type": "DOUBLE"
-					},
-					{
-						"name": "rateCodeId",
-						"type": "INT32"
-					},
-					{
-						"name": "storeAndFwdFlag",
-						"type": "UTF8"
-					},
-					{
-						"name": "paymentType",
-						"type": "UTF8"
-					},
-					{
-						"name": "fareAmount",
-						"type": "DOUBLE"
-					},
-					{
-						"name": "extra",
-						"type": "DOUBLE"
-					},
-					{
-						"name": "mtaTax",
-						"type": "DOUBLE"
-					},
-					{
-						"name": "improvementSurcharge",
-						"type": "UTF8"
-					},
-					{
-						"name": "tipAmount",
-						"type": "DOUBLE"
-					},
-					{
-						"name": "tollsAmount",
-						"type": "DOUBLE"
-					},
-					{
-						"name": "totalAmount",
-						"type": "DOUBLE"
-					}
-				]
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/linkedServices/AzureBlobStoragenyctlc')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/Synapse_nyctlcParquet')]",
-			"type": "Microsoft.Synapse/workspaces/datasets",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "global-ws-WorkspaceDefaultStorage",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"path": {
-						"type": "string"
-					}
-				},
-				"annotations": [],
-				"type": "Parquet",
-				"typeProperties": {
-					"location": {
-						"type": "AzureBlobFSLocation",
-						"folderPath": {
-							"value": "CONCAT(\"nyctlc/\",dataset().path)",
-							"type": "Expression"
-						},
-						"fileSystem": "landingzone"
-					},
-					"compressionCodec": "snappy"
-				},
-				"schema": [
-					{
-						"name": "AddressID",
-						"type": "INT32"
-					},
-					{
-						"name": "AddressLine1",
-						"type": "UTF8"
-					},
-					{
-						"name": "AddressLine2",
-						"type": "UTF8"
-					},
-					{
-						"name": "City",
-						"type": "UTF8"
-					},
-					{
-						"name": "StateProvince",
-						"type": "UTF8"
-					},
-					{
-						"name": "CountryRegion",
-						"type": "UTF8"
-					},
-					{
-						"name": "PostalCode",
-						"type": "UTF8"
-					},
-					{
-						"name": "rowguid",
-						"type": "UTF8"
-					},
-					{
-						"name": "ModifiedDate",
-						"type": "INT96"
-					}
-				]
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/linkedServices/global-ws-WorkspaceDefaultStorage')]"
-			]
 		}
 	]
 }

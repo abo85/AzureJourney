@@ -14,14 +14,14 @@
 		"AzureBlobStorage1_sasUri": {
 			"value": ""
 		},
+		"AzureBlobStoragenyctlc_sasUri": {
+			"value": ""
+		},
 		"MDWResources_sasUri": {
 			"value": ""
 		},
 		"global-ws-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"value": "https://synapseadlsfromdax.dfs.core.windows.net"
-		},
-		"AzureBlobStoragenyctlc_sasUri": {
-			"value": ""
 		}
 	}
 }
