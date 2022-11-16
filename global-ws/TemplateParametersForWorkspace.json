@@ -11,16 +11,16 @@
 		"global-ws-WorkspaceDefaultSqlServer_connectionString": {
 			"value": ""
 		},
+		"AzureBlobStorage1_sasUri": {
+			"value": ""
+		},
 		"MDWResources_sasUri": {
 			"value": ""
 		},
 		"global-ws-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"value": "https://synapseadlsfromdax.dfs.core.windows.net"
 		},
-		"nyc_tlc_fhv_sasUri": {
-			"value": ""
-		},
-		"nyc_tlc_yellow_sasUri": {
+		"AzureBlobStoragenyctlc_sasUri": {
 			"value": ""
 		}
 	}
