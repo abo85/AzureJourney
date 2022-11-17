@@ -22,6 +22,21 @@
 		},
 		"global-ws-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"value": "https://synapseadlsfromdax.dfs.core.windows.net"
+		},
+		"EveryDay10pm_properties_AUTO_PAUSE_SQLPOOL_parameters_ResourceGroup": {
+			"value": "synapse_rg"
+		},
+		"EveryDay10pm_properties_AUTO_PAUSE_SQLPOOL_parameters_SubscriptionID": {
+			"value": "d3ce2efc-3c23-4c5c-b5b4-3f736c2477e0"
+		},
+		"EveryDay10pm_properties_AUTO_PAUSE_SQLPOOL_parameters_WorkspaceName": {
+			"value": "global-ws"
+		},
+		"EveryDay10pm_properties_AUTO_PAUSE_SQLPOOL_parameters_SQLPoolName": {
+			"value": "DWH"
+		},
+		"EveryDay10pm_properties_AUTO_PAUSE_SQLPOOL_parameters_PauseorResume": {
+			"value": "Pause"
 		}
 	}
 }

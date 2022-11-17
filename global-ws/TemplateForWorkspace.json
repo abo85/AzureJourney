@@ -30,6 +30,26 @@
 		"global-ws-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "https://synapseadlsfromdax.dfs.core.windows.net"
+		},
+		"EveryDay10pm_properties_AUTO_PAUSE_SQLPOOL_parameters_ResourceGroup": {
+			"type": "string",
+			"defaultValue": "synapse_rg"
+		},
+		"EveryDay10pm_properties_AUTO_PAUSE_SQLPOOL_parameters_SubscriptionID": {
+			"type": "string",
+			"defaultValue": "d3ce2efc-3c23-4c5c-b5b4-3f736c2477e0"
+		},
+		"EveryDay10pm_properties_AUTO_PAUSE_SQLPOOL_parameters_WorkspaceName": {
+			"type": "string",
+			"defaultValue": "global-ws"
+		},
+		"EveryDay10pm_properties_AUTO_PAUSE_SQLPOOL_parameters_SQLPoolName": {
+			"type": "string",
+			"defaultValue": "DWH"
+		},
+		"EveryDay10pm_properties_AUTO_PAUSE_SQLPOOL_parameters_PauseorResume": {
+			"type": "string",
+			"defaultValue": "Pause"
 		}
 	},
 	"variables": {
@@ -959,6 +979,50 @@
 			},
 			"dependsOn": [],
 			"location": "westeurope"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/EveryDay10pm')]",
+			"type": "Microsoft.Synapse/workspaces/triggers",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Started",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "AUTO_PAUSE_SQLPOOL",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"ResourceGroup": "[parameters('EveryDay10pm_properties_AUTO_PAUSE_SQLPOOL_parameters_ResourceGroup')]",
+							"SubscriptionID": "[parameters('EveryDay10pm_properties_AUTO_PAUSE_SQLPOOL_parameters_SubscriptionID')]",
+							"WorkspaceName": "[parameters('EveryDay10pm_properties_AUTO_PAUSE_SQLPOOL_parameters_WorkspaceName')]",
+							"SQLPoolName": "[parameters('EveryDay10pm_properties_AUTO_PAUSE_SQLPOOL_parameters_SQLPoolName')]",
+							"PauseorResume": "[parameters('EveryDay10pm_properties_AUTO_PAUSE_SQLPOOL_parameters_PauseorResume')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2022-11-17T10:27:00Z",
+						"timeZone": "UTC",
+						"schedule": {
+							"minutes": [
+								0
+							],
+							"hours": [
+								22
+							]
+						}
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/pipelines/AUTO_PAUSE_SQLPOOL')]"
+			]
 		}
 	]
 }
